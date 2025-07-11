@@ -39,6 +39,21 @@ struct ContentView: View {
                         print("Weak password")
                         self.errorText = "Weak password"
                     }
+                    
+                    do {
+                        try await authManager.updateProfileDisplayName(displayName)
+                    } catch AuthErrorCode.userNotFound {
+                        print("Must to login first")
+                    }
+                }
+            }
+            Button("Change Display Name") {
+                Task {
+                    do {
+                        try await authManager.updateProfileDisplayName(displayName)
+                    } catch {
+                        print("ERROR")
+                    }
                 }
             }
         }

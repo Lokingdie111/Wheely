@@ -98,7 +98,7 @@ class AuthManager: ObservableObject {
             throw AuthErrorCode.userNotFound
         }
         
-        let a: Void = try await withCheckedThrowingContinuation { continuation in
+        let _: Void = try await withCheckedThrowingContinuation { continuation in
             user.delete { error in
                 if let error = error {
                     print("[AuthManager] Failed to delete account.", error.localizedDescription)
@@ -118,7 +118,7 @@ class AuthManager: ObservableObject {
     public func updateProfileDisplayName(_ displayName: String) async throws {
         let changeRequest = Auth.auth().currentUser?.createProfileChangeRequest()
         changeRequest?.displayName = displayName
-        let a: Void = try await withCheckedThrowingContinuation { continuation in
+        let _: Void = try await withCheckedThrowingContinuation { continuation in
             changeRequest?.commitChanges { error in
                 if let error = error {
                     print("[AuthManager] Failed to update display name.", error.localizedDescription)
@@ -138,7 +138,7 @@ class AuthManager: ObservableObject {
             throw AuthErrorCode.userNotFound
         }
         
-        let result: Void = try await withCheckedThrowingContinuation { continuation in
+        let _: Void = try await withCheckedThrowingContinuation { continuation in
             user.updatePassword(to: password) { error in
                 if let error = error {
                     print("[AuthManager] Failed to update email.", error.localizedDescription)
@@ -159,7 +159,7 @@ class AuthManager: ObservableObject {
             throw AuthErrorCode.userNotFound
         }
         
-        let result: Void = try await withCheckedThrowingContinuation { continuation in
+        let _: Void = try await withCheckedThrowingContinuation { continuation in
             user.reload { error in
                 if let error = error {
                     print("[AuthManager] Failed to reload user info.")
