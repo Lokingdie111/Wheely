@@ -14,7 +14,7 @@ struct UserInfo {
     var uid: String?
     var displayName: String?
 }
-
+@MainActor
 class AuthManager: ObservableObject {
     /// Check this value to check user currently logged in.
     @Published var isUserLogin: Bool = false
@@ -32,27 +32,24 @@ class AuthManager: ObservableObject {
     ///     - email: User email
     ///     - password: User password
     /// - Returns: Return true when signin succesfully, return false when sigin failed.
-    public func signIn(email: String, password: String, completion: @escaping (AuthErrorCode?) -> Void) async -> Bool {
-        let result = await withCheckedContinuation { continuation in
-            
+    public func signIn(email: String, password: String) async throws {
+        try await withCheckedThrowingContinuation { continuation in
             Auth.auth().signIn(withEmail: email, password: password) { result, error in
                 if result != nil {
                     print("[AuthManager] Sign In Successfully.")
-                    continuation.resume(returning: true)
+                    continuation.resume()
                 } else {
                     if let error = error {
                         print("[AuthManager] Sign In Failed.", error.localizedDescription)
-                        completion(AuthErrorManager.checkError(error))
+                        continuation.resume(throwing: AuthErrorManager.checkError(error))
                     } else {
                         print("[AuthManager] Sign In Failed with no error msg.")
+                        continuation.resume(throwing: AuthErrorCode.internalError)
                     }
-                    continuation.resume(returning: false)
                 }
             }
             
         }
-        
-        return result
     }
     
     /// Sign up by FireAuth
@@ -65,24 +62,23 @@ class AuthManager: ObservableObject {
     ///     - email: Email want to sign up with
     ///     - password: Password want to sign up with
     /// - Returns: Return true when signin succesfully, return false when sigin failed.
-    public func signUp(email: String, password: String, completion: @escaping (AuthErrorCode?) -> Void) async -> Bool {
-        let signUpResult = await withCheckedContinuation { continuation in
+    public func signUp(email: String, password: String) async throws {
+        try await withCheckedThrowingContinuation { continuation in
             Auth.auth().createUser(withEmail: email, password: password) { result, error in
                 if result != nil {
                     print("[AuthManager] Sign Up Successfully.")
-                    continuation.resume(returning: true)
+                    continuation.resume()
                 } else {
                     if let error = error {
                         print("[AuthManager] Sign Up Failed.", error.localizedDescription)
-                        completion(AuthErrorManager.checkError(error))
+                        continuation.resume(throwing: AuthErrorManager.checkError(error))
                     } else {
                         print("[AuthManager] Sign Up Failed with no error msg.")
+                        continuation.resume(throwing: AuthErrorCode.internalError)
                     }
-                    continuation.resume(returning: false)
                 }
             }
         }
-        return signUpResult
     }
     public func signOut() -> Bool {
         do {
@@ -94,26 +90,24 @@ class AuthManager: ObservableObject {
         }
     }
     /// Delete account in FirebaseAuth. User needs to login.
-    public func deleteAccount(completion: @escaping (AuthErrorCode?) -> Void) async -> Bool {
-        let user = Auth.auth().currentUser
+    ///
+    /// - Parameters:
+    ///     - completion: this function will send error to completion. by AuthErrorCode?
+    public func deleteAccount() async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw AuthErrorCode.userNotFound
+        }
         
-        if let user = user {
-            let result = await withCheckedContinuation { continuation in
-                user.delete { error in
-                    if let error = error {
-                        print("[AuthManager] Failed to delete account.", error.localizedDescription)
-                        completion(AuthErrorManager.checkError(error))
-                        continuation.resume(returning: false)
-                    } else {
-                        print("[AuthManager] Successfully delete account.")
-                        continuation.resume(returning: true)
-                    }
+        let a: Void = try await withCheckedThrowingContinuation { continuation in
+            user.delete { error in
+                if let error = error {
+                    print("[AuthManager] Failed to delete account.", error.localizedDescription)
+                    continuation.resume(throwing: AuthErrorManager.checkError(error))
+                } else {
+                    print("[AuthManager] Successfully delete account.")
+                    continuation.resume()
                 }
             }
-            return result
-        } else {
-            print("[AuthManager] Failed to delete account. User not login.")
-            return false
         }
     }
     /// Updating user display name.
@@ -121,54 +115,62 @@ class AuthManager: ObservableObject {
     /// - Parameters:
     ///     - displayName: String what you want to change.
     ///     - completion: Error will be send to this closure.
-    public func updateProfileDisplayName(_ displayName: String, completion: @escaping (AuthErrorCode?) -> Void) async -> Bool {
+    public func updateProfileDisplayName(_ displayName: String) async throws {
         let changeRequest = Auth.auth().currentUser?.createProfileChangeRequest()
         changeRequest?.displayName = displayName
-        let result = await withCheckedContinuation { continuation in
+        let a: Void = try await withCheckedThrowingContinuation { continuation in
             changeRequest?.commitChanges { error in
                 if let error = error {
                     print("[AuthManager] Failed to update display name.", error.localizedDescription)
-                    completion(AuthErrorManager.checkError(error))
-                    continuation.resume(returning: false)
+                    continuation.resume(throwing: AuthErrorManager.checkError(error))
                 } else {
                     print("[AuthManager] Successfully updated display name.")
-                    continuation.resume(returning: true)
+                    continuation.resume()
                 }
             }
         }
-        if result == true {
-            _ = await self.reloadUserInfo { error in
-                if let error = error {
-                    print("[AuthManager] Failed to reload user info after update display name.")
-                    completion(error)
-                }
-            }
-        }
-        return result
+        try await self.reloadUserInfo()
     }
-    /// reload User info
-    ///
-    /// Thiis function fetch user info to FirebaseAuth server. and reloading self.userInfo.
-    private func reloadUserInfo(completion: @escaping (AuthErrorCode?) -> Void) async -> Bool{
+    
+    /// Change User Password
+    public func updatePassword(_ password: String) async throws {
         guard let user = Auth.auth().currentUser else {
-            return false
+            throw AuthErrorCode.userNotFound
         }
         
-        let result = await withCheckedContinuation { continuation in
+        let result: Void = try await withCheckedThrowingContinuation { continuation in
+            user.updatePassword(to: password) { error in
+                if let error = error {
+                    print("[AuthManager] Failed to update email.", error.localizedDescription)
+                    continuation.resume(throwing: AuthErrorManager.checkError(error))
+                } else {
+                    print("[AuthManager] Successfully updated email.")
+                    continuation.resume()
+                }
+            }
+        }
+    }
+    
+    /// reload User info.
+    ///
+    /// Thiis function fetch user info to FirebaseAuth server. and reloading self.userInfo.
+    private func reloadUserInfo() async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw AuthErrorCode.userNotFound
+        }
+        
+        let result: Void = try await withCheckedThrowingContinuation { continuation in
             user.reload { error in
                 if let error = error {
                     print("[AuthManager] Failed to reload user info.")
-                    completion(AuthErrorManager.checkError(error))
-                    continuation.resume(returning: false)
+                    continuation.resume(throwing: AuthErrorManager.checkError(error))
                 } else {
                     print("[AuthManager] Successfully reload user info.")
                     self.userInfo = UserInfo(email: user.email, uid: user.uid, displayName: user.displayName)
-                    continuation.resume(returning: true)
+                    continuation.resume()
                 }
             }
         }
-        return result
-        
     }
     
     init() {
@@ -178,10 +180,5 @@ class AuthManager: ObservableObject {
             self.isUserLogin = user != nil
             self.userInfo = UserInfo(email: user?.email, uid: user?.uid, displayName: user?.displayName)
         }
-    }
-    
-    deinit {
-        // Remove Auth handler
-        Auth.auth().removeStateDidChangeListener(handle!)
     }
 }

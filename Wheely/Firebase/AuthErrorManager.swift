@@ -9,13 +9,17 @@ import Foundation
 import FirebaseAuth
 
 class AuthErrorManager {
-    public static func checkError(_ error: Error) -> AuthErrorCode? {
+    public static func checkError(_ error: Error) -> AuthErrorCode {
         if let error = error as NSError? {
             let authError = AuthErrorCode(rawValue: error.code)
-            return authError
+            if let authError = authError {
+                return authError
+            } else {
+                return .internalError
+            }
         } else {
             print("[AuthErrorManager] Unknown Error")
-            return nil
+            return .internalError
         }
     }
 }

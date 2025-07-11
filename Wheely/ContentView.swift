@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct ContentView: View {
     
@@ -26,50 +27,17 @@ struct ContentView: View {
             TextField("Display Name", text: $displayName)
             Button("Sign-up") {
                 Task {
-                    let result = await authManager.signUp(email: email, password: password) { error in
-                        if let error = error {
-                            if error == .emailAlreadyInUse {
-                                errorText = "Email is already in use."
-                            } else if error == .invalidEmail {
-                                errorText = "Invalid email format."
-                            }
-                        }
-                    }
-                    if result == true {
-                        print("Success to sign up")
-                        let displayResult = await authManager.updateProfileDisplayName(displayName) { error in
-                            if let error = error {
-                                print("Error occurred: \(error)")
-                            }
-                        }
-                        if displayResult == true {
-                            print("Success to set display name")
-                        } else {
-                            print("Failed to set display name")
-                        }
-                    }
-                    
-                }
-            }
-            Button("Sign-out") {
-                print(authManager.signOut())
-            }
-            Button("delete") {
-                Task {
-                    let result = await authManager.deleteAccount { error in
-                        if let error = error {
-                            if error == .userNotFound {
-                            }
-                        }
-                    }
-                }
-            }
-            Button("Update displayName") {
-                Task {
-                    await authManager.updateProfileDisplayName(displayName) { error in
-                        if let error = error {
-                            print("ERROR")
-                        }
+                    do {
+                        try await authManager.signUp(email: email, password: password)
+                    } catch AuthErrorCode.emailAlreadyInUse {
+                        print("Email already in used.")
+                        self.errorText = "Email already in used."
+                    } catch AuthErrorCode.internalError {
+                        print("Interal Error caused.")
+                        self.errorText = "Internal Error Caused."
+                    } catch AuthErrorCode.weakPassword {
+                        print("Weak password")
+                        self.errorText = "Weak password"
                     }
                 }
             }
