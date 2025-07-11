@@ -18,11 +18,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 @main
 struct WheelyApp: App {
+    @StateObject var authManager = AuthManager()
     // FireBase prepare
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authManager)
         }
     }
 }

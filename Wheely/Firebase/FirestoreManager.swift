@@ -11,6 +11,4 @@ import FirebaseFirestore
 
 class FirestoreManager {
     
-    
-   
 }
