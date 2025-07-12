@@ -18,6 +18,8 @@ struct ContentView: View {
     
     var body: some View {
         VStack {
+            Text(TimeManager.convertToUTC())
+            Text(TimeManager.convertToLocal())
             Text(authManager.userInfo?.displayName ?? "Hello, World!")
             Text(authManager.isUserLogin ? "Logged in" : "Logged out")
             Text(errorText)
