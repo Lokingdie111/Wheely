@@ -15,27 +15,57 @@ enum CacheError: Error {
     case nameAlreadyExist
 }
 
-// 그냥 모든 행위를 할때 Firestore랑 캐시랑 똑같이 행동해주면 되는거잖아?
-class FirestoreManager: ObservableObject {
-    func getData(from: String, date: Date) throws {
-        // 캐시에서 가져오면 되겠지?
-    }
+enum FirestoreError: Error {
+    case failedToGetData
+}
+
+class DataManager {
     
-    func addData(from: String, data: FirestoreData) throws {
-        // Firestore에 먼저 추가한다음에 캐시에도 추가를 하면 될꺼야.
-    }
+}
+
+// 얘는 firestore관련 작업만 하고 DataManager가 총괄하는걸로 하자. 그렇게 하는게 깔끔할거같아.
+// uid -> [Name : [FirestoreData]]
+class FirestoreManager {
+    let db = Firestore.firestore()
     
-    func deleteData(from: String, data: FirestoreData) throws {
-        // 여기도 Firestore에 삭제한다음에 캐시에서도 삭제를 하면 될꺼야.
-    }
-    
-    func updateData(from: String, data: FirestoreData) throws {
-        // 여기도 Firestore에 업데이트 한후에 캐시에서 업데이트.
-    }
-    
-    
-    private func getDataFromFirebase(collection: String, document: String) -> [String] {
+    /// uid안의 새로운 name 필드를 만듭니다.
+    func makeName(uid: String, name: String) {
         
+    }
+    
+    func addValueInName(uid: String, name: String, value: FirestoreData) {
+        
+    }
+    
+    func addValuesInName(uid: String, name: String, values: [FirestoreData]) {
+        
+    }
+    
+    func deleteValueInName(uid: String, name: String, value: FirestoreData) {
+        
+    }
+    
+    func deleteValuesInName(uid: String, name: String, values: [FirestoreData]) {
+        
+    }
+    
+    /// 데이터를 새롭게 업데이트 합니다.
+    ///
+    /// 주어진 데이터의 날짜를 비교해서 같은 날짜의 데이터를 찾아 치환합니다.
+    /// - Parameters:
+    ///     - updateTo: 이 값으로 데이터가 업데이트 됩니다.
+    func updateValueInName(uid: String, name: String, updateTo: FirestoreData) {
+        
+    }
+    
+    /// Name 필드를 삭제합니다.
+    func removeName(uid: String, name: String) {
+        
+    }
+    
+    private func getKeys(_ dict: [String : Any]) -> [String] {
+        let keys = Array(dict.keys)
+        return keys
     }
 }
 
