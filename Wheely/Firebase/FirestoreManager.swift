@@ -16,56 +16,60 @@ enum CacheError: Error {
 }
 
 enum FirestoreError: Error {
+    case internalError
     case failedToGetData
+    case failedUnwrapData
+    case firebase(code: FirestoreErrorCode.Code)
 }
 
 class DataManager {
     
 }
 
-// 얘는 firestore관련 작업만 하고 DataManager가 총괄하는걸로 하자. 그렇게 하는게 깔끔할거같아.
+// 일단 에러 처리는 나중에 하자.
 // uid -> [Name : [FirestoreData]]
 class FirestoreManager {
     let db = Firestore.firestore()
+    let collection = "Data"
+    let uid: String
     
-    /// uid안의 새로운 name 필드를 만듭니다.
-    func makeName(uid: String, name: String) {
-        
+    public func get() async -> [String: [FirestoreData]]? {
+        let result: [String: [FirestoreData]]? = await withCheckedContinuation { continuation in
+            db.collection(collection).document(uid).getDocument { document, error in
+                if let error = error {
+                    print("Error occurred: \(error)")
+                    continuation.resume(returning: nil)
+                    return
+                }
+                
+                guard let document = document else {
+                    print("Failed to fetch document.")
+                    continuation.resume(returning: nil)
+                    return
+                }
+                print(document.exists)
+                guard let data = document.data() as? [String: [String]] else {
+                    print("Failed to casting document data.")
+                    continuation.resume(returning: nil)
+                    return
+                }
+                print(data)
+                let formatter = FirestoreFormater()
+                let result = try? formatter.makeToFirestoreData(data)
+                continuation.resume(returning: result)
+            }
+        }
+        return result
     }
     
-    func addValueInName(uid: String, name: String, value: FirestoreData) {
-        
-    }
-    
-    func addValuesInName(uid: String, name: String, values: [FirestoreData]) {
-        
-    }
-    
-    func deleteValueInName(uid: String, name: String, value: FirestoreData) {
-        
-    }
-    
-    func deleteValuesInName(uid: String, name: String, values: [FirestoreData]) {
-        
-    }
-    
-    /// 데이터를 새롭게 업데이트 합니다.
-    ///
-    /// 주어진 데이터의 날짜를 비교해서 같은 날짜의 데이터를 찾아 치환합니다.
-    /// - Parameters:
-    ///     - updateTo: 이 값으로 데이터가 업데이트 됩니다.
-    func updateValueInName(uid: String, name: String, updateTo: FirestoreData) {
-        
-    }
-    
-    /// Name 필드를 삭제합니다.
-    func removeName(uid: String, name: String) {
-        
-    }
-    
+    /// Dictonary안의 키들을 모두 가져옵니다.
     private func getKeys(_ dict: [String : Any]) -> [String] {
         let keys = Array(dict.keys)
         return keys
+    }
+    
+    init(uid: String) {
+        self.uid = uid
     }
 }
 
@@ -253,4 +257,22 @@ class FirestoreFormater: TimeManager {
         return FirestoreData(date: time, values: values)
     }
     
+    func makeToFirestoreData(_ data: [String: [String]]) throws -> [String: [FirestoreData]] {
+        var result: [String : [FirestoreData]] = [:]
+        let keys = self.getKeys(data)
+        for key in keys {
+            let array = data[key]!
+            
+            let parsed = try array.map{ value in
+                try self.parseStringToData(stringValue: value)
+            }
+            result[key] = parsed
+        }
+        return result
+    }
+    
+    private func getKeys(_ dict: [String: Any]) -> [String] {
+        let keys = Array(dict.keys)
+        return keys
+    }
 }

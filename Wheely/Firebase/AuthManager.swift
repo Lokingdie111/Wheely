@@ -41,7 +41,7 @@ class AuthManager: ObservableObject {
                 } else {
                     if let error = error {
                         print("[AuthManager] Sign In Failed.", error.localizedDescription)
-                        continuation.resume(throwing: AuthErrorManager.checkError(error))
+                        continuation.resume(throwing: ErrorManager.authError(error))
                     } else {
                         print("[AuthManager] Sign In Failed with no error msg.")
                         continuation.resume(throwing: AuthErrorCode.internalError)
@@ -71,7 +71,7 @@ class AuthManager: ObservableObject {
                 } else {
                     if let error = error {
                         print("[AuthManager] Sign Up Failed.", error.localizedDescription)
-                        continuation.resume(throwing: AuthErrorManager.checkError(error))
+                        continuation.resume(throwing: ErrorManager.authError(error))
                     } else {
                         print("[AuthManager] Sign Up Failed with no error msg.")
                         continuation.resume(throwing: AuthErrorCode.internalError)
@@ -102,7 +102,7 @@ class AuthManager: ObservableObject {
             user.delete { error in
                 if let error = error {
                     print("[AuthManager] Failed to delete account.", error.localizedDescription)
-                    continuation.resume(throwing: AuthErrorManager.checkError(error))
+                    continuation.resume(throwing: ErrorManager.authError(error))
                 } else {
                     print("[AuthManager] Successfully delete account.")
                     continuation.resume()
@@ -122,7 +122,7 @@ class AuthManager: ObservableObject {
             changeRequest?.commitChanges { error in
                 if let error = error {
                     print("[AuthManager] Failed to update display name.", error.localizedDescription)
-                    continuation.resume(throwing: AuthErrorManager.checkError(error))
+                    continuation.resume(throwing: ErrorManager.authError(error))
                 } else {
                     print("[AuthManager] Successfully updated display name.")
                     continuation.resume()
@@ -142,7 +142,7 @@ class AuthManager: ObservableObject {
             user.updatePassword(to: password) { error in
                 if let error = error {
                     print("[AuthManager] Failed to update email.", error.localizedDescription)
-                    continuation.resume(throwing: AuthErrorManager.checkError(error))
+                    continuation.resume(throwing: ErrorManager.authError(error))
                 } else {
                     print("[AuthManager] Successfully updated email.")
                     continuation.resume()
@@ -163,7 +163,7 @@ class AuthManager: ObservableObject {
             user.reload { error in
                 if let error = error {
                     print("[AuthManager] Failed to reload user info.")
-                    continuation.resume(throwing: AuthErrorManager.checkError(error))
+                    continuation.resume(throwing: ErrorManager.authError(error))
                 } else {
                     print("[AuthManager] Successfully reload user info.")
                     self.userInfo = UserInfo(email: user.email, uid: user.uid, displayName: user.displayName)

@@ -27,10 +27,5 @@ struct WheelyApp: App {
                 .environmentObject(authManager)
         }
     }
-    init() {
-        
-        // Initailze for using firestore
-        FirebaseApp.configure()
-        
-    }
+    
 }
