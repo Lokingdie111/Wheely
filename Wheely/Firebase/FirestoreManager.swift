@@ -47,13 +47,13 @@ class FirestoreManager {
                     continuation.resume(returning: nil)
                     return
                 }
-                print(document.exists)
+                
                 guard let data = document.data() as? [String: [String]] else {
                     print("Failed to casting document data.")
                     continuation.resume(returning: nil)
                     return
                 }
-                print(data)
+                
                 let formatter = FirestoreFormater()
                 let result = try? formatter.makeToFirestoreData(data)
                 continuation.resume(returning: result)
@@ -62,10 +62,146 @@ class FirestoreManager {
         return result
     }
     
+    public func get(_ name: String) async -> [FirestoreData]? {
+        let result = await self.get()
+        
+        if let result = result {
+            let value = result[name]
+            print("Result: \(value)")
+            return value
+        } else {
+            return nil
+        }
+    }
+    
+    public func addData(_ name: String, data: FirestoreData) async {
+        guard var _data = await self.get(name) else {
+            print("Failed to get datas")
+            return
+        }
+        
+        
+        for d in _data {
+            if d.date == data.date {
+                print("Failed to add datas, same date exist. data: \(d.date) given: \(data.date)")
+                return
+            }
+        }
+        
+        _data.append(data)
+        
+        let formatter = FirestoreFormater()
+        
+        let encoded = _data.map { value in
+            formatter.makeDataToString(value)
+        }
+        
+        do {
+            try await db.collection(collection).document(uid).setData(["\(name)": encoded], merge: true)
+            return
+        } catch {
+            print("Failed to push datas")
+            return
+        }
+    }
+    public func deleteData(_ name: String, date: Date) async {
+        guard var datas = await self.get(name) else {
+            print("Failed to get datas")
+            return
+        }
+        datas.removeAll { $0.date == date }
+        let f = FirestoreFormater()
+        
+        let encoded = datas.map { value in
+            f.makeDataToString(value)
+        }
+        
+        do {
+            try await db.collection(collection).document(uid).setData(["\(name)": encoded], merge: true)
+        } catch {
+            print("Failed to push datas")
+            return
+        }
+    }
+    public func makeField(_ name: String) async {
+        guard let exist = await self.checkFieldExist(name: name) else {
+            print("Failed to check field is already exist")
+            return
+        }
+        if !exist {
+            do {
+                print("MAKE FIELD")
+                try await db.collection(collection).document(uid).setData(["\(name)": []], merge: true)
+                return
+            } catch {
+                print("Failed to make field.")
+                return
+            }
+        } else {
+            print("Failed to make field, field name is already exist")
+        }
+    }
+    
+    public func makeDocument() async {
+        guard let exist = await checkDocumentExist(uid) else {
+            print("Failed to check Document exist")
+            return
+        }
+        if !exist {
+            do {
+                try await db.collection(collection).document(uid).setData([:])
+                print("Successfully make Document name \(uid)")
+            } catch {
+                print("Failed to make Document")
+            }
+            return
+        } else {
+            print("Document name \(uid) is already exist")
+            return
+        }
+    }
+    
     /// Dictonary안의 키들을 모두 가져옵니다.
     private func getKeys(_ dict: [String : Any]) -> [String] {
         let keys = Array(dict.keys)
         return keys
+    }
+    
+    private func checkDocumentExist(_ target: String) async -> Bool? {
+        
+        let result: Bool? = await withCheckedContinuation { continuation in
+            db.collection(collection).getDocuments { snapshot, error in
+                guard let documents = snapshot?.documents else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                
+                for d in documents {
+                    if d.documentID == target {
+                        continuation.resume(returning: true)
+                        return
+                    }
+                }
+                
+                continuation.resume(returning: false)
+            }
+        }
+        
+        return result
+    }
+    public func checkFieldExist(name: String) async -> Bool? {
+        guard let datas = await self.get() else {
+            print("Failed to fecth document datas")
+            return nil
+        }
+        
+        let result = datas[name]
+        
+        if result == nil {
+            return false
+        } else {
+            return true
+        }
     }
     
     init(uid: String) {
@@ -270,7 +406,21 @@ class FirestoreFormater: TimeManager {
         }
         return result
     }
-    
+    func makeToString(_ data: [String: [FirestoreData]]) -> [String : [String]] {
+        var result: [String : [String]] = [:]
+        let keys = self.getKeys(data)
+        
+        for key in keys {
+            let array = data[key]!
+            
+            let parsed = array.map{ value in
+                self.makeDataToString(value)
+            }
+            result[key] = parsed
+        }
+        
+        return result
+    }
     private func getKeys(_ dict: [String: Any]) -> [String] {
         let keys = Array(dict.keys)
         return keys

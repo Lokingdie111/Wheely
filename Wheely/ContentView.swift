@@ -19,10 +19,10 @@ struct ContentView: View {
     var body: some View {
         VStack {
             Button("CLICK") {
-                let firestoremanager = FirestoreManager(uid: "ADMIN")
+                let firestoremanager = FirestoreManager(uid: "ADMIN1")
                 Task {
-                    let result = await firestoremanager.get()
-                    print("\(String(describing: result))")
+                    await firestoremanager.makeField("test1")
+                    await firestoremanager.addData("test1", data: FirestoreData(date: .now, values: [1,2,3,4,5,6,7,8,9,10,11,12]))
                 }
             }
         }
