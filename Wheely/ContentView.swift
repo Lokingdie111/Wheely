@@ -16,17 +16,30 @@ struct ContentView: View {
     @State var password: String = ""
     @State var displayName: String = ""
     
+    @State var dataManager: DataManager?
+    
     var body: some View {
         VStack {
             Button("CLICK") {
-                let firestoremanager = FirestoreManager(uid: "ADMIN1")
                 Task {
-                    await firestoremanager.makeField("test1")
-                    await firestoremanager.addData("test1", data: FirestoreData(date: .now, values: [1,2,3,4,5,6,7,8,9,10,11,12]))
+                    let result = await dataManager?.get("test")
+                    await dataManager?.updateData("test", data: FirestoreData(date: result![0].date, values: [1,2,3,4,5]))
+                }
+            }
+            Button("GET") {
+                Task{
+                    let result = await dataManager?.get()
+                    print(String(describing: result))
                 }
             }
         }
         .padding()
+        .onAppear {
+            Task {
+                self.dataManager = await DataManager.create(uid: "ADMIN1")
+                print("Manager Created.")
+            }
+        }
     }
 }
 
