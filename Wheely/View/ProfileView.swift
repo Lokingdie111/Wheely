@@ -13,6 +13,7 @@ struct ProfileView: View {
     @State var email: String = ""
     @State var password: String = ""
     
+    @State var signupSheet: Bool = false
     var body: some View {
         if authManager.isUserLogin {
             
@@ -27,7 +28,7 @@ struct ProfileView: View {
                 HStack {
                     Text("If you don't have an account,")
                     Button{
-                        
+                        signupSheet = true
                     } label: {
                         Text("Sign-up")
                     }
@@ -35,12 +36,17 @@ struct ProfileView: View {
                 }
                 .font(.caption)
             }
+            .sheet(isPresented: $signupSheet) {
+                SignUpView()
+            }
         }
     }
 }
 
+
 /// 이메일과 비밀번호를 입력받습니다.
 struct LoginComponent: View {
+    
     @Binding var email: String
     @Binding var password: String
     
@@ -58,7 +64,6 @@ struct LoginComponent: View {
                     RoundedRectangle(cornerRadius: 5)
                         .stroke(Color.black, lineWidth: 1)
                 }
-
         }
     }
 }
