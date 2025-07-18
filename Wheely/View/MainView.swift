@@ -16,13 +16,36 @@ struct MainView: View {
             Tab(value: TabSelection.home) {
                 HomeView()
             } label: {
+                Image(systemName: "house")
                 Text("Home")
             }
-
+            
+            Tab(value: TabSelection.wheels) {
+                WheelsView()
+            } label: {
+                Image(systemName: "bicycle")
+                Text("Wheels")
+            }
+            
+            Tab(value: TabSelection.profile) {
+                ProfileView()
+            } label: {
+                Image(systemName: "person")
+                Text("Profile")
+            }
+            
             Tab(value: TabSelection.settings) {
                 SettingsView()
             } label: {
+                Image(systemName: "gear")
                 Text("Settings")
+            }
+            
+            Tab(value: TabSelection.settings) {
+                ManualView()
+            } label: {
+                Image(systemName: "text.document")
+                Text("Manual")
             }
         }
     }
@@ -30,4 +53,5 @@ struct MainView: View {
 
 #Preview {
     MainView()
+        .environmentObject(TabViewController())
 }

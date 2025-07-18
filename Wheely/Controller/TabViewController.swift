@@ -12,6 +12,7 @@ enum TabSelection {
     case settings
     case profile
     case wheels
+    case manual
 }
 
 @MainActor
