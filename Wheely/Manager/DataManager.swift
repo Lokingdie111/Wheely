@@ -7,7 +7,24 @@
 
 import Foundation
 import FirebaseFirestore
-
+import FirebaseAuth
+/// Wheely의 사용자 데이터를 관리합니다.
+///
+/// ## Firestore
+/// 기본적으로 Firestore에 데이터를 저장하여 사용합니다.
+///
+/// ## Cache
+/// Firestore에 너무 빈번한 요청을 방지하기 위해 한번 요청한 데이터를 재사용합니다.
+///
+/// ## 동기화
+/// 처음 DataManager가 초기화되면 Firestore로 요청을 보내여 데이터를 모조리 가져옵니다.
+///
+/// - 데이터 읽기
+///     - 데이터를 읽을때에는 캐시먼저 확인후 없으면 Firestore를 확인합니다.
+/// - 데이터 쓰기
+///     - Firestore에 먼저 쓴 후 성공시 캐시에도 작성합니다.
+///
+/// > Firestore가 Cache 보다 데이터가 항상 최신이거나 같습니다.
 @MainActor
 class DataManager {
     let firestoreManager: FirestoreManager
@@ -18,12 +35,12 @@ class DataManager {
         let cacheResult = cacheManager.cache
         
         if cacheResult.isEmpty {
-            print("[DataManager] Cache empty!")
+            log("Cache empty!")
             guard let data = await firestoreManager.get() else {
-                print("Failed to get data from firestore")
+                log("Failed to get data from firestore")
                 return nil
             }
-            print("[DataManager] Successfully get data from firestore")
+            log("Successfully get data from firestore")
             cacheManager.cache = data
             return data
         } else{
@@ -49,9 +66,9 @@ class DataManager {
                 let result = try cacheManager.getAllData(name)
                 return result
             } catch {
-                print("[DataManager] No name exist. Finding in firestore...")
+                log("No name exist. Finding in firestore...")
                 guard let fetch = await firestoreManager.get(name) else {
-                    print("[DataManager] Failed to get data from firestore.")
+                    log("Failed to get data from firestore.")
                     return nil
                 }
                 
@@ -60,12 +77,14 @@ class DataManager {
                 return fetch
             }
         } else {
-            print("[DataManager] Failed to get data from firestore")
+            log("Failed to get data from firestore")
             return nil
         }
     }
     
     /// 데이터를 저장합니다.
+    ///
+    /// > 필드가 이미 생성되어있어야 합니다.
     ///
     /// ## 실행순서
     /// 1. Firestore에 먼저 데이터를 추가합니다.
@@ -78,10 +97,10 @@ class DataManager {
             do {
                 try cacheManager.addData(name, data: data)
             } catch {
-                print("[DataManager] Failed to add data to cache...")
+                log("Failed to add data to cache...")
             }
         } else {
-            print("[DataManager] Failed to add data to firestore")
+            log("Failed to add data to firestore")
         }
     }
     public func deleteData(_ name: String, date: Date) async {
@@ -90,10 +109,10 @@ class DataManager {
             do {
                 try cacheManager.deleteData(name, date: date)
             } catch {
-                print("[DataManager] Failed to delete data from cache...")
+                log("Failed to delete data from cache...")
             }
         } else {
-            print("[DataManager] Failed to delete data in firestore.")
+            log("Failed to delete data in firestore.")
         }
     }
     
@@ -108,13 +127,65 @@ class DataManager {
             do {
                 try cacheManager.updateData(name, data: data)
             } catch {
-                print("[DataManager] Failed to update data in cache...")
+                log("Failed to update data in cache...")
             }
         } else {
-            print("[DataManager] Failed to update data in firestore.")
+            log("Failed to update data in firestore.")
+        }
+    }
+    /// 필드 생성
+    public func makeField(_ name: String) async {
+        let result = await firestoreManager.makeField(name, checkExist: true)
+        if result == false {
+            log("Failed to make field in firestore.")
+            return
+        }
+        do {
+            try cacheManager.makeField(name)
+        } catch {
+            log("Field already exist in cache...")
+        }
+    }
+    public func removeField(_ name: String) async {
+        let result = await firestoreManager.removeField(name)
+        if result {
+            try? cacheManager.deleteField(name)
+        } else {
+            log("Failed to remove field in firestore.")
         }
     }
     
+    public func updateFieldName(_ name: String, _ to: String) async {
+        
+        guard let value = self.cacheManager.cache[name] else {
+            log("Name \"\(name)\" field not found in cache...")
+            return
+        }
+        
+        if self.cacheManager.cache[to] != nil {
+            log("Name \"\(to)\" field already exist in cache...")
+            return
+        }
+        
+        let success = await self.firestoreManager.updateFieldName(name, to)
+        if success {
+            do {
+                try self.cacheManager.upadateFieldName(name, to)
+            } catch {
+                log("Failed to update field name in cache...")
+            }
+        } else {
+            log("Something wrong...")
+        }
+    }
+    
+    /// 도큐먼트 생성
+    public func makeDocument() async {
+        let result = await self.firestoreManager.makeDocument(checkExist: true)
+        if result != true {
+            log("Failed to make document in firestore.")
+        }
+    }
     /// 캐시가 비어있는지 체크하고 만약 비어있으면 채우기를 시도합니다.
     ///
     /// > 반환값이 True이면 일반적으로 이후 작업을 수행해도 좋다는 뜻입니다.
@@ -122,12 +193,12 @@ class DataManager {
     /// - Returns: 데이터를 불러와 캐시에 저장하는것에 성공했으면 True, 그렇지 않으면 false를 반환합니다.
     private func emptySequence() async -> Bool{
         if cacheManager.cache.isEmpty {
-            print("[DataManager] Cache is empty. Trying to get data from firestore...")
+            log("Cache is empty. Trying to get data from firestore...")
             guard let data = await firestoreManager.get() else {
-                print("[DataManager] Failed to get data from firestore")
+                log("Failed to get data from firestore")
                 return false
             }
-            print("[DataManager] Successfully get data from firestore!")
+            log("Successfully get data from firestore!")
             cacheManager.cache = data
             return true
         } else {
@@ -143,10 +214,19 @@ class DataManager {
         if let data = data {
             cacheManager = CacheManager(cache: data)
         } else {
-            print("[DataManager] Failed to get data from firestore")
+            log("Failed to get data from firestore")
             cacheManager = CacheManager(cache: [:])
         }
-        return DataManager(firestoreManager: firestoreManager, cacheManager: cacheManager)
+        let dataManager = DataManager(firestoreManager: firestoreManager, cacheManager: cacheManager)
+        await dataManager.makeDocument()
+        return dataManager
+    }
+    
+    private func log(_ msg: String) {
+        print("[DataManager] \(msg)")
+    }
+    private static func log(_ msg: String) {
+         print("[DataManager] \(msg)")       
     }
     
     private init(firestoreManager: FirestoreManager, cacheManager: CacheManager) {
@@ -154,15 +234,6 @@ class DataManager {
         self.cacheManager = cacheManager
     }
 }
-
-// 일단 에러 처리는 나중에 하자.
-// uid -> [Name : [FirestoreData]]
-
-
-
-
-
-
 
 class FirestoreFormater: TimeManager {
     

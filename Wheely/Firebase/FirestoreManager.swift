@@ -153,7 +153,7 @@ class FirestoreManager {
         }
     }
     
-    public func makeField(_ name: String, checkExist: Bool = false) async {
+    public func makeField(_ name: String, checkExist: Bool = false) async -> Bool {
         var exist: Bool
         
         if checkExist {
@@ -172,17 +172,18 @@ class FirestoreManager {
             do {
                 print("MAKE FIELD")
                 try await db.collection(collection).document(uid).setData(["\(name)": []], merge: true)
-                return
+                return true
             } catch {
                 print("Failed to make field.")
-                return
+                return false
             }
         } else {
             print("Failed to make field, field name is already exist")
+            return false
         }
     }
     
-    public func makeDocument(checkExist: Bool = false) async {
+    public func makeDocument(checkExist: Bool = false) async -> Bool {
         var exist: Bool
         if checkExist {
             let result = await self.checkDocumentExist(uid)
@@ -198,14 +199,14 @@ class FirestoreManager {
         if !exist {
             do {
                 try await db.collection(collection).document(uid).setData([:])
-                print("Successfully make Document name \(uid)")
+                return true
             } catch {
                 print("Failed to make Document")
+                return false
             }
-            return
         } else {
             print("Document name \(uid) is already exist")
-            return
+            return false
         }
     }
     
@@ -215,7 +216,7 @@ class FirestoreManager {
         return keys
     }
     
-    private func checkDocumentExist(_ target: String) async -> Bool? {
+    public func checkDocumentExist(_ target: String) async -> Bool? {
         
         let result: Bool? = await withCheckedContinuation { continuation in
             db.collection(collection).getDocuments { snapshot, error in
@@ -252,6 +253,48 @@ class FirestoreManager {
         }
     }
     
+    public func removeField(_ name: String) async -> Bool {
+        let result: Bool = await withCheckedContinuation { continuation in
+            db.collection(collection).document(uid).updateData(["\(name)": FieldValue.delete()]) { error in
+                if let error = error {
+                    print("Failed to delete Field.")
+                    continuation.resume(returning: false)
+                } else {
+                    continuation.resume(returning: true)
+                }
+            }
+        }
+        return result
+
+    }
+    public func updateFieldName(_ name: String, _ to: String) async -> Bool {
+        guard let data = await self.get(name) else {
+            return false
+        }
+        var encoded: [String] = []
+        let formatter = FirestoreFormater()
+        for d in data {
+            encoded.append(formatter.makeDataToString(d))
+        }
+        let result: Bool = await withCheckedContinuation { continuation in
+            db.collection(collection).document(uid).updateData(["\(to)": encoded]) { error in
+                if let error = error {
+                    print("Failed to update field \(error)")
+                    continuation.resume(returning: false)
+                } else {
+                    self.db.collection(self.collection).document(self.uid).updateData(["\(name)": FieldValue.delete()]) { error in
+                        if let error = error {
+                            print("Failed to remove original field \(error)")
+                            continuation.resume(returning: false)
+                        } else {
+                            continuation.resume(returning: true)
+                        }
+                    }
+                }
+            }
+        }
+        return result
+    }
     init(uid: String) {
         self.uid = uid
     }

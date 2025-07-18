@@ -63,6 +63,7 @@ class CacheManager {
                 break
             }
         }
+        cache[name] = dataArray
         
     }
     
@@ -87,9 +88,8 @@ class CacheManager {
             }
             
         }
-        
+        cache[name] = dataArray
         return ignoredDatas
-        
     }
     
     /// 캐시에 새로운 데이터를 추가합니다.
@@ -111,6 +111,7 @@ class CacheManager {
         }
         
         dataArray.append(data)
+        cache[name] = dataArray
     }
     
     /// 캐시에 있는 데이터를 제거합니다.
@@ -125,10 +126,10 @@ class CacheManager {
         for index in 0..<dataArray.count {
             if dataArray[index].date == date {
                 dataArray.remove(at: index)
+                cache[name] = dataArray
                 return
             }
         }
-        
         throw CacheError.dataNotFound
     }
     
@@ -150,13 +151,30 @@ class CacheManager {
     /// 새로운 이름(Document)를 생성합니다.
     ///
     /// - Throws: 이미 같은 이름이 존재할경우 CacheError.nameAlreadyExist 를 throw합니다.
-    func makeDocument(_ name: String) throws {
+    func makeField(_ name: String) throws {
         if let _ = cache[name] {
             // 같은 이름이 이미 존재.
             throw CacheError.nameAlreadyExist
         } else {
             cache[name] = []
         }
+    }
+    
+    func deleteField(_ name: String) throws {
+        cache.removeValue(forKey: name)
+    }
+    
+    func upadateFieldName(_ name: String, _ to: String) throws {
+        guard let value = cache[name] else {
+            throw CacheError.nameNotFound
+        }
+        let alreadyExist = cache[to]
+        
+        if alreadyExist != nil {
+            throw CacheError.nameAlreadyExist
+        }
+        cache.removeValue(forKey: name)
+        cache[to] = value
     }
     
     init(cache: [String : [FirestoreData]]) {

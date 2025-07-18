@@ -22,8 +22,8 @@ struct ContentView: View {
         VStack {
             Button("CLICK") {
                 Task {
-                    let result = await dataManager?.get("test")
-                    await dataManager?.updateData("test", data: FirestoreData(date: result![0].date, values: [1,2,3,4,5]))
+                    await dataManager?.makeField("test3")
+                    await dataManager?.addData("test3", data: FirestoreData(date: .now, values: [1,1,1,1,1]))
                 }
             }
             Button("GET") {
@@ -32,11 +32,21 @@ struct ContentView: View {
                     print(String(describing: result))
                 }
             }
+            Button("UPDATE") {
+                Task {
+                    await dataManager?.updateFieldName("test3", "ADMIN")
+                }
+            }
+            Button("Delete") {
+                Task{
+                    await dataManager?.removeField("test3")
+                }
+            }
         }
         .padding()
         .onAppear {
             Task {
-                self.dataManager = await DataManager.create(uid: "ADMIN1")
+                self.dataManager = await DataManager.create(uid: "ADMIN2")
                 print("Manager Created.")
             }
         }

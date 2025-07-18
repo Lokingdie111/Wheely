@@ -30,6 +30,4 @@ struct MainView: View {
 
 #Preview {
     MainView()
-        .environmentObject(AuthManager())
-        .environmentObject(TabViewController())
 }

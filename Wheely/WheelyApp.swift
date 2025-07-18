@@ -19,12 +19,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct WheelyApp: App {
     @StateObject var authManager = AuthManager()
+    @StateObject var tabViewController = TabViewController()
     // FireBase prepare
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
                 .environmentObject(authManager)
+                .environmentObject(tabViewController)
         }
     }
     
