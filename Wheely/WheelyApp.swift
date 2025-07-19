@@ -16,6 +16,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
   }
 }
 
+// TODO: 이왕하는거 제대로.
 @main
 struct WheelyApp: App {
     @StateObject var authManager = AuthManager()
